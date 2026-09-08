@@ -1,3 +1,4 @@
+# Last updated: 2026-09-08
 # 상품 관련 업무 로직입니다.
 
 from app.ai import vector_store
@@ -29,8 +30,9 @@ def get_best_selling(db, limit=5):
 
 
 # 카테고리에 속한 상품을 AI 에게 보낼 만큼만 추려서 돌려줍니다.
-def get_product_summaries(db, category, limit=10):
-    products = product_repository.find_by_category(db, category, limit)
+# sort 가 "price_desc"/"price_asc" 면 가격순으로 자릅니다. "제일 비싼/싼" 질문용입니다.
+def get_product_summaries(db, category, limit=10, sort=None):
+    products = product_repository.find_by_category(db, category, limit, sort=sort)
     return [
         {
             "product_id": product.product_id,

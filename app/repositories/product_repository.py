@@ -1,3 +1,4 @@
+# Last updated: 2026-09-08
 # 상품 테이블에 접근하는 곳입니다.
 
 from app.models.product import Product
@@ -7,8 +8,13 @@ def find_all(db, limit=20):
     return db.query(Product).limit(limit).all()
 
 
-def find_by_category(db, category, limit=20):
-    return db.query(Product).filter(Product.category == category).limit(limit).all()
+def find_by_category(db, category, limit=20, sort=None):
+    query = db.query(Product).filter(Product.category == category)
+    if sort == "price_desc":
+        query = query.order_by(Product.price.desc())
+    elif sort == "price_asc":
+        query = query.order_by(Product.price.asc())
+    return query.limit(limit).all()
 
 
 def find_by_id(db, product_id):

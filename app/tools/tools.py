@@ -1,3 +1,4 @@
+# Last updated: 2026-09-08
 # AI 가 고를 수 있는 도구 목록입니다.
 
 import json
@@ -59,6 +60,11 @@ TOOL_SPECS = [
                 "properties": {
                     "category": {"type": "string", "description": "상품 카테고리"},
                     "limit": {"type": "integer", "description": "몇 개까지 볼지. 기본 10"},
+                    "sort": {
+                        "type": "string",
+                        "enum": ["price_desc", "price_asc"],
+                        "description": "제일 비싼 상품을 물으면 price_desc, 제일 싼 상품을 물으면 price_asc. 그 외에는 넣지 않습니다.",
+                    },
                 },
                 "required": ["category"],
             },
