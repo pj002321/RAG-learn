@@ -1,5 +1,17 @@
 # AI 에게 보낼 문장을 모아둡니다.
 
+# 앞서 나눈 대화를 프롬프트 앞에 붙일 글로 만듭니다.
+def build_history(history):
+    if not history:
+        return ""
+
+    turns = "\n".join(f"질문: {turn['question']}\n답변: {turn['answer']}" for turn in history)
+    return f"""앞서 나눈 대화
+{turns}
+
+"""
+
+
 PLAN_SYSTEM = """당신은 화장품 쇼핑몰 관리자를 돕는 비서입니다.
 
 질문을 보고 도구를 쓸지 말지 정하세요.
@@ -11,7 +23,12 @@ PLAN_SYSTEM = """당신은 화장품 쇼핑몰 관리자를 돕는 비서입니�
 도구를 쓰지 않는 질문
 - 상품 설명이나 후기 내용처럼 글을 읽어야 답할 수 있는 질문
   예) "이 로션 사용법 알려줘", "환불 되나요", "트러블에 좋다는 후기 있어"
-  이런 질문에는 도구를 고르지 말고 그냥 답하세요."""
+  이런 질문에는 도구를 고르지 말고 그냥 답하세요.
+
+앞서 나눈 대화가 있으면 그것도 보고 판단하세요.
+"그거 정리해줘", "방금 그 5개는" 처럼 앞 대화를 가리키는 질문이면,
+앞 대화에서 다룬 것이 순위나 개수였는지 보고 **같은 도구를 다시 고르세요.**
+앞 대화에 답이 있으니 도구가 필요 없다고 판단하지 마세요."""
 
 
 RERANK_SYSTEM = """당신은 검색 결과를 다시 줄 세우는 역할입니다.
@@ -29,21 +46,10 @@ RERANK_SYSTEM = """당신은 검색 결과를 다시 줄 세우는 역할입니�
 RAG_SYSTEM = """당신은 화장품 쇼핑몰의 상담 담당자입니다.
 
 지켜야 할 것
-- 아래 참고 자료에 있는 내용만으로 답합니다.
-- 자료에 없는 내용은 지어내지 말고 "자료에서 확인되지 않습니다" 라고 답합니다.
-- 한국어로, 세 문장 이내로 짧게 답합니다.
+- 앞서 나눈 대화와 아래 참고 자료에 있는 내용으로 답합니다.
+- 둘 다에 없는 내용은 지어내지 말고 "자료에서 확인되지 않습니다" 라고 답합니다.
+- 한국어로 짧게 답합니다. 앞 대화를 이어받는 질문이 아니면 세 문장 이내로 씁니다.
 - 다음에 무엇을 더 해줄지 먼저 제안하지 않습니다. 물어본 것에만 답합니다."""
-
-
-# 검색해 온 청크를 참고 자료로 붙여서 질문 문장을 만듭니다.
-def build_rag_prompt(question, chunks):
-    context = "\n\n".join(f"[{chunk['source_id']}] {chunk['content']}" for chunk in chunks)
-
-    return f"""참고 자료
-{context}
-
-질문
-{question}"""
 
 
 TOOL_SYSTEM = """당신은 화장품 쇼핑몰의 관리자를 돕는 비서입니다.
@@ -62,13 +68,24 @@ TOOL_SYSTEM = """당신은 화장품 쇼핑몰의 관리자를 돕는 비서입�
   이때도 근거가 되는 고객이나 후기를 같이 밝힙니다.
 - 다음에 무엇을 더 해줄지 먼저 제안하지 않습니다. 물어본 것에만 답합니다."""
 
-
 # 도구가 DB 에서 가져온 결과를 참고 자료로 붙입니다.
-def build_tool_prompt(question, rows):
+def build_tool_prompt(question, rows, history):
     lines = "\n".join(str(row) for row in rows)
 
-    return f"""조회 결과
-{lines}
+    return f"""{build_history(history)}조회 결과
+        {lines}
 
-질문
-{question}"""
+        질문
+        {question}"""
+
+
+# 검색해 온 청크를 참고 자료로 붙여서 질문 문장을 만듭니다.
+def build_rag_prompt(question, chunks, history):
+    context = "\n\n".join(f"[{chunk['source_id']}] {chunk['content']}" for chunk in chunks)
+
+    return f"""
+        {build_history(history)}참고 자료   
+        {context}
+        질문
+        {question}
+    """
