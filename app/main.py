@@ -1,55 +1,24 @@
 """
-질문과 뜻이 비슷한 글을 찾아옵니다. RAG 에서 R(Retrieval, 검색) 에 해당합니다.
+FastAPI 애플리케이션입니다.
 
-직접 확인해 보기:
-    python -m app.rag.retriever "건성 피부에 쓸 토너"
+실행: uvicorn app.main:app --reload
+문서: http://localhost:8000/docs
 
-하는 일은 두 줄이 전부입니다.
-    1. 질문을 벡터로 바꾼다
-    2. 그 벡터와 가까운 청크를 찾는다
-
-아직 LLM 은 등장하지 않습니다. 검색만으로 어디까지 되는지 먼저 봅니다.
+요청이 흘러가는 길:
+  브라우저 -> api -> services -> repositories -> SQLAlchemy -> DB
 """
 
-import sys
+from fastapi import FastAPI
 
-from app.ai import vector_store
-from app.ai.embedder import embed_texts
-from app.db import SessionLocal
+from app.api import ask, customers, products
 
-TOP_K = 10
+app = FastAPI(title="화장품 AI 관리자")
 
-
-def retrieve(db, question, top_k=TOP_K):
-    query_vector = embed_texts([question])[0]
-    return vector_store.search(db, query_vector, top_k)
+app.include_router(products.router)
+app.include_router(customers.router)
+app.include_router(ask.router)
 
 
-def print_results(question, results):
-    print(f'질문: "{question}"')
-    print()
-    print("  순위  유사도  출처      섹션            내용")
-    print("  " + "-" * 76)
-
-    for rank, chunk in enumerate(results, start=1):
-        section = chunk["section"] or "후기"
-        body = chunk["content"].replace("\n", " ")[:34]
-        print(f"  {rank:>3}  {chunk['score']:.3f}  {chunk['source_id']:<8}  {section:<14}  {body}...")
-
-
-def main():
-    if len(sys.argv) < 2:
-        print('사용법: python -m app.rag.retriever "질문"')
-        return
-
-    question = sys.argv[1]
-
-    db = SessionLocal()
-    results = retrieve(db, question)
-    db.close()
-
-    print_results(question, results)
-
-
-if __name__ == "__main__":
-    main()
+@app.get("/")
+def home():
+    return {"message": "화장품 AI 관리자 API", "문서": "/docs"}
