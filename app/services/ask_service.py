@@ -1,3 +1,4 @@
+# Last updated: 2026-09-09
 # AI 에게 질문하고 답을 만듭니다.
 
 from app.graph.graph import graph
@@ -18,7 +19,7 @@ def build_state(db, question, history):
     }
 
 
-def build_answer(question, result):
+def build_answer(question, result, history):
     return {
         "question": question,
         "answer": result["answer"],
@@ -26,19 +27,23 @@ def build_answer(question, result):
         "path": " -> ".join(result["path"]),
         "sources": result["documents"],
         "tool_result": result["tool_result"],
+        # 받은 대화에 이번 턴을 붙여서 돌려줍니다. 서버는 저장하지 않습니다.
+        "history": history + [{"question": question, "answer": result["answer"]}],
     }
 
 
 def ask(db, question, history=None):
-    result = graph.invoke(build_state(db, question, history or []))
-    return build_answer(question, result)
+    history = history or []
+    result = graph.invoke(build_state(db, question, history))
+    return build_answer(question, result, history)
 
 
 # 진행 상황을 두 가지로 내보냅니다.
 def ask_stream(db, question, history=None):
     result = {}
+    history = history or []
 
-    state = build_state(db, question, history or [])
+    state = build_state(db, question, history)
 
     for source, data in graph.stream(state, stream_mode=["updates", "custom"]):
         if source == "custom":
@@ -50,4 +55,4 @@ def ask_stream(db, question, history=None):
             # route 를 같이 보내면 화면에서 칸 색을 바로 칠할 수 있습니다.
             yield {"type": "node", "name": name, "route": result.get("route", "")}
 
-    yield {"type": "done", **build_answer(question, result)}
+    yield {"type": "done", **build_answer(question, result, history)}

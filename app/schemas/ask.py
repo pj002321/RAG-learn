@@ -1,3 +1,4 @@
+# Last updated: 2026-09-09
 # AI 질문과 답변의 형식입니다.
 
 from pydantic import BaseModel
@@ -46,3 +47,6 @@ class AskResponse(BaseModel):
 
     # 도구로 답했을 때 DB 에서 가져온 결과입니다. 개인정보는 가려져 있습니다.
     tool_result: list[dict]
+
+    # 이번 질문과 답을 붙인 대화 기록입니다. 그대로 다음 요청의 history 로 보내면 대화가 이어집니다.
+    history: list[Turn]
